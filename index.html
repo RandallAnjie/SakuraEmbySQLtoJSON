@@ -47,14 +47,15 @@
   .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
 
   .drop {
+    display: block;
     border: 1.5px dashed var(--border); border-radius: 12px; padding: 28px 16px; text-align: center;
     background: var(--panel2); transition: border-color .15s, background .15s;
     cursor: pointer;
   }
-  .drop.dragging { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel2)); }
+  .drop.dragging { border-color: var(--accent); background: rgba(255, 143, 171, 0.10); }
   .drop strong { display: block; margin-bottom: 6px; }
   .drop small { color: var(--muted); }
-  .drop input { display: none; }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
   .opts { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 14px; }
   .opts label { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; color: var(--muted); }
@@ -508,7 +509,6 @@ function readFile(file) {
   reader.readAsText(file, "utf-8");
 }
 
-drop.addEventListener("click", () => fileInput.click());
 drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("dragging"); });
 drop.addEventListener("dragleave", () => drop.classList.remove("dragging"));
 drop.addEventListener("drop", (e) => {
