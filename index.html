@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>樱花名册 · 从 Sakura_embyboss 迁到 EM</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --panel2: #1d2230;
+    --border: #2a3142;
+    --text: #e6e8ee;
+    --muted: #8a93a6;
+    --accent: #ff8fab;
+    --accent2: #ffb3c6;
+    --ok: #74e08a;
+    --warn: #f0c674;
+    --err: #ff7575;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafbff;
+      --panel: #ffffff;
+      --panel2: #f3f5fb;
+      --border: #e3e7f0;
+      --text: #1a1d24;
+      --muted: #5a6379;
+      --accent: #d6336c;
+      --accent2: #e85a86;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: 0.2px; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  header a { color: var(--accent); text-decoration: none; }
+  header a:hover { text-decoration: underline; }
+
+  .grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 22px; }
+  @media (min-width: 860px) { .grid { grid-template-columns: 1.05fr 0.95fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
+
+  .drop {
+    border: 1.5px dashed var(--border); border-radius: 12px; padding: 28px 16px; text-align: center;
+    background: var(--panel2); transition: border-color .15s, background .15s;
+    cursor: pointer;
+  }
+  .drop.dragging { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel2)); }
+  .drop strong { display: block; margin-bottom: 6px; }
+  .drop small { color: var(--muted); }
+  .drop input { display: none; }
+
+  .opts { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 14px; }
+  .opts label { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; color: var(--muted); }
+  .opts label input { accent-color: var(--accent); }
+  .opts .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .opts .seg button {
+    background: transparent; color: var(--text); border: none; padding: 6px 12px; font-size: 13px;
+    cursor: pointer; border-right: 1px solid var(--border);
+  }
+  .opts .seg button:last-child { border-right: none; }
+  .opts .seg button.on { background: var(--accent); color: #fff; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .stats span b { color: var(--text); font-weight: 600; }
+
+  .msgs { margin-top: 10px; min-height: 20px; font-size: 13px; }
+  .msgs .err { color: var(--err); }
+  .msgs .ok { color: var(--ok); }
+  .msgs .warn { color: var(--warn); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button.btn {
+    background: var(--accent); color: #fff; border: none; padding: 8px 14px; border-radius: 8px;
+    font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+  button.btn:hover { background: var(--accent2); }
+  button.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button.btn.ghost:hover { background: var(--panel2); }
+  button.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  pre.out {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.5; max-height: 480px; overflow: auto;
+    white-space: pre; margin: 0;
+  }
+  details { margin-top: 14px; font-size: 13px; color: var(--muted); }
+  details summary { cursor: pointer; }
+  details code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); }
+
+  footer { margin-top: 30px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>樱花名册</h1>
+      <p>从 <a href="https://github.com/berry8838/Sakura_embyboss" target="_blank" rel="noopener">Sakura_embyboss</a> 搬家到 <a href="https://syxxxx.net/" target="_blank" rel="noopener">EM</a> 的中间一站 —— 翻一遍旧库的备份，把每个人的 Telegram ID、Emby ID、到期时间挑出来排成一份名单，EM 那边导入就用它。<br>整件事都在你自己的浏览器里发生，文件不会上传到任何地方，刷新页面就什么都没了。</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>第一步 · 把文件丢进来</h2>
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept=".sql,.txt,.dump,application/sql,text/plain" />
+        <strong>把 .sql 拖到这里，或者点一下选一个</strong>
+        <small>mysqldump 或 sqlite <code>.dump</code> 都行 —— 文件留在你电脑上</small>
+      </label>
+
+      <div class="opts">
+        <span class="seg" id="fmt">
+          <button data-v="json" class="on">JSON</button>
+          <button data-v="csv">CSV</button>
+          <button data-v="tsv">TSV</button>
+        </span>
+        <label><input type="checkbox" id="onlyBound" /> 跳过还没绑 Emby 的</label>
+        <label><input type="checkbox" id="header" checked /> CSV/TSV 带表头</label>
+        <label><input type="checkbox" id="pretty" checked /> JSON 排版好看一点</label>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div class="msgs" id="msgs"></div>
+
+      <div class="actions">
+        <button class="btn" id="download" disabled>下载</button>
+        <button class="btn ghost" id="copy" disabled>复制</button>
+        <button class="btn ghost" id="clear">从头来</button>
+      </div>
+
+      <details>
+        <summary>字段是怎么对上的？</summary>
+        <p style="margin-top:8px;line-height:1.7">
+          原表 <code>emby</code> 里：<code>tg</code> 是 Telegram ID，<code>embyid</code> 是 Emby 那边的用户 ID，<code>ex</code> 是到期时间。<br>
+          导出时分别叫 <code>tgId</code>、<code>embyId</code>、<code>expiresAt</code>。<br>
+          <code>ex</code> 是 <code>NULL</code> 或者空的，就当作永久 —— 导出里 <code>expiresAt</code> 留空。<br>
+          时间统一按 UTC 写成 <code>2026-12-31T00:00:00Z</code> 这种形式。mysqldump（反引号、<code>\'</code> 转义）和 sqlite <code>.dump</code>（双引号、<code>''</code> 转义）都能读。
+        </p>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>第二步 · 看一眼，没问题就拿走</h2>
+      <pre class="out" id="out">（还没东西可以看 —— 先丢个文件进来）</pre>
+    </section>
+  </div>
+
+  <footer>一张静态页 · 想搬哪儿都行 · Cloudflare Pages、GitHub Pages、随便一个目录都跑得起来</footer>
+</div>
+
+<script>
+"use strict";
+
+// ---------- SQL parser ----------
+// 兼容 mysqldump 与 sqlite .dump：
+// - 标识符可被 ` " [] 包裹，或裸 identifier
+// - 字符串字面量：单引号或双引号；转义 '' "" 或 \' \" \\ \n \t \r \0
+// - VALUES 可跨多行、可多组 (..),(..)
+// - NULL（不区分大小写）= null
+
+function stripIdent(s) {
+  if (!s) return s;
+  const c = s[0];
+  if ((c === '`' || c === '"' || c === '[') && s.length >= 2) {
+    const end = c === '[' ? ']' : c;
+    if (s[s.length - 1] === end) return s.slice(1, -1);
+  }
+  return s;
+}
+
+// 解析单引号或双引号字符串字面量；i 指向起始引号；返回 [value, nextIndex]
+function readString(src, i) {
+  const quote = src[i];
+  let out = "";
+  i++;
+  while (i < src.length) {
+    const ch = src[i];
+    if (ch === "\\") {
+      const n = src[i + 1];
+      switch (n) {
+        case "n": out += "\n"; break;
+        case "t": out += "\t"; break;
+        case "r": out += "\r"; break;
+        case "0": out += "\0"; break;
+        case "b": out += "\b"; break;
+        case "Z": out += "\x1a"; break;
+        case "\\": out += "\\"; break;
+        case "'": out += "'"; break;
+        case '"': out += '"'; break;
+        case "%": out += "\\%"; break;
+        case "_": out += "\\_"; break;
+        default:
+          // 未知转义：保留下一个字符
+          out += n === undefined ? "" : n;
+      }
+      i += 2;
+      continue;
+    }
+    if (ch === quote) {
+      // SQL 标准：连续两个引号 = 一个引号字面量
+      if (src[i + 1] === quote) { out += quote; i += 2; continue; }
+      return [out, i + 1];
+    }
+    out += ch;
+    i++;
+  }
+  throw new Error("字符串字面量未闭合");
+}
+
+// 读取一个 VALUES 元组 (v, v, ...); i 指向 '('；返回 [array, nextIndex]
+function readTuple(src, i) {
+  if (src[i] !== "(") throw new Error("期望 '('");
+  i++;
+  const out = [];
+  while (i < src.length) {
+    // skip ws
+    while (i < src.length && /\s/.test(src[i])) i++;
+    const ch = src[i];
+    if (ch === ")") return [out, i + 1];
+    if (ch === "'" || ch === '"') {
+      const [val, ni] = readString(src, i);
+      out.push(val);
+      i = ni;
+    } else {
+      // 读到 , 或 ) 为止（注意可能是带括号的函数调用，但 dump 里基本不会出现；做一个简易容错）
+      let depth = 0;
+      let buf = "";
+      while (i < src.length) {
+        const c = src[i];
+        if (c === "'" || c === '"') {
+          const [val, ni] = readString(src, i);
+          // 把字符串原样塞回（这种情况罕见，主要是兜底）
+          buf += JSON.stringify(val);
+          i = ni;
+          continue;
+        }
+        if (c === "(") { depth++; buf += c; i++; continue; }
+        if (c === ")") {
+          if (depth === 0) break;
+          depth--; buf += c; i++; continue;
+        }
+        if (c === "," && depth === 0) break;
+        buf += c; i++;
+      }
+      const trimmed = buf.trim();
+      if (trimmed === "" ) {
+        // 不应该发生
+        out.push(null);
+      } else if (/^null$/i.test(trimmed)) {
+        out.push(null);
+      } else if (/^-?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(trimmed)) {
+        out.push(Number(trimmed));
+      } else if (/^(true|false)$/i.test(trimmed)) {
+        out.push(/^true$/i.test(trimmed));
+      } else {
+        // 其他：原样字符串
+        out.push(trimmed);
+      }
+    }
+    // skip ws
+    while (i < src.length && /\s/.test(src[i])) i++;
+    if (src[i] === ",") { i++; continue; }
+    if (src[i] === ")") return [out, i + 1];
+  }
+  throw new Error("VALUES 元组未闭合");
+}
+
+// 从 SQL 文本中找 CREATE TABLE `emby` 的列顺序
+function findEmbyColumns(sql) {
+  // 匹配 CREATE TABLE [IF NOT EXISTS] (`emby`|"emby"|emby) ( ... );
+  // 取出括号内部
+  const re = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(`emby`|"emby"|\[emby\]|emby)\s*\(/ig;
+  let m;
+  while ((m = re.exec(sql))) {
+    let i = re.lastIndex; // 指向 '(' 后第一个字符
+    let depth = 1;
+    let start = i;
+    while (i < sql.length && depth > 0) {
+      const c = sql[i];
+      if (c === "'" || c === '"' || c === "`") {
+        // 跳过被引号包裹的标识符/字符串
+        const quote = c;
+        i++;
+        while (i < sql.length) {
+          if (sql[i] === "\\" && (quote === "'" || quote === '"')) { i += 2; continue; }
+          if (sql[i] === quote) {
+            if (sql[i + 1] === quote) { i += 2; continue; }
+            i++; break;
+          }
+          i++;
+        }
+        continue;
+      }
+      if (c === "(") depth++;
+      else if (c === ")") { depth--; if (depth === 0) break; }
+      i++;
+    }
+    const body = sql.slice(start, i);
+    // 按顶层逗号分割
+    const parts = splitTopLevelComma(body);
+    const cols = [];
+    for (const p of parts) {
+      const t = p.trim();
+      if (!t) continue;
+      // 跳过约束行
+      if (/^(PRIMARY|UNIQUE|KEY|INDEX|CONSTRAINT|FOREIGN|CHECK)\b/i.test(t)) continue;
+      // 取第一个 token 作为列名
+      const tok = t.match(/^(`[^`]+`|"[^"]+"|\[[^\]]+\]|[A-Za-z_][\w$]*)/);
+      if (tok) cols.push(stripIdent(tok[1]));
+    }
+    if (cols.length) return cols;
+  }
+  return null;
+}
+
+function splitTopLevelComma(body) {
+  const out = [];
+  let depth = 0, buf = "", i = 0;
+  while (i < body.length) {
+    const c = body[i];
+    if (c === "'" || c === '"' || c === "`") {
+      const quote = c;
+      buf += c; i++;
+      while (i < body.length) {
+        buf += body[i];
+        if (body[i] === "\\" && (quote === "'" || quote === '"')) { i++; if (i < body.length) { buf += body[i]; i++; } continue; }
+        if (body[i] === quote) {
+          if (body[i + 1] === quote) { buf += body[i + 1]; i += 2; continue; }
+          i++; break;
+        }
+        i++;
+      }
+      continue;
+    }
+    if (c === "(") { depth++; buf += c; i++; continue; }
+    if (c === ")") { depth--; buf += c; i++; continue; }
+    if (c === "," && depth === 0) { out.push(buf); buf = ""; i++; continue; }
+    buf += c; i++;
+  }
+  if (buf.length) out.push(buf);
+  return out;
+}
+
+// 主解析器：返回 [{tg, embyid, ex}, ...]
+function parseEmbySql(sql) {
+  const cols = findEmbyColumns(sql);
+  const rows = [];
+  // 寻找 INSERT INTO emby
+  const insertRe = /INSERT\s+(?:IGNORE\s+)?INTO\s+(`emby`|"emby"|\[emby\]|emby)\s*(\([^)]*\))?\s*VALUES\s*/ig;
+  let m;
+  while ((m = insertRe.exec(sql))) {
+    // 列名（如果 INSERT 指定了）
+    let insertCols = null;
+    if (m[2]) {
+      insertCols = m[2].slice(1, -1).split(",").map(s => stripIdent(s.trim()));
+    } else if (cols) {
+      insertCols = cols;
+    }
+    if (!insertCols) {
+      throw new Error("找不到 emby 表列定义。请确保 .sql 中包含 CREATE TABLE emby 或 INSERT INTO emby (列名...) VALUES。");
+    }
+    let i = insertRe.lastIndex;
+    // 读多个 (..),(..); 直到分号
+    while (i < sql.length) {
+      while (i < sql.length && /\s/.test(sql[i])) i++;
+      if (sql[i] !== "(") break;
+      const [tup, ni] = readTuple(sql, i);
+      i = ni;
+      const obj = {};
+      for (let k = 0; k < insertCols.length; k++) obj[insertCols[k]] = tup[k];
+      rows.push(obj);
+      while (i < sql.length && /\s/.test(sql[i])) i++;
+      if (sql[i] === ",") { i++; continue; }
+      if (sql[i] === ";") { i++; break; }
+      break;
+    }
+    insertRe.lastIndex = i;
+  }
+  return rows;
+}
+
+// ---------- transforms ----------
+
+function toIsoZ(v) {
+  if (v === null || v === undefined) return "";
+  const s = String(v).trim();
+  if (!s) return "";
+  // 形如 "2026-12-31 00:00:00" 或 "2026-12-31T00:00:00" 或带小数秒
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(?:Z|([+-]\d{2}:?\d{2}))?$/);
+  if (!m) {
+    // 仅日期
+    const d = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (d) return `${d[1]}-${d[2]}-${d[3]}T00:00:00Z`;
+    return s; // 保留原样
+  }
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`;
+}
+
+function buildRecords(parsed, opts) {
+  const out = [];
+  for (const r of parsed) {
+    const tg = r.tg;
+    const embyid = r.embyid;
+    const ex = r.ex;
+    const tgId = tg === null || tg === undefined ? "" : String(tg);
+    const embyId = embyid === null || embyid === undefined ? "" : String(embyid);
+    const expiresAt = toIsoZ(ex);
+    if (!tgId) continue;
+    if (opts.onlyBound && !embyId) continue;
+    out.push({ tgId, embyId, expiresAt });
+  }
+  return out;
+}
+
+function toJSON(records, pretty) {
+  return pretty ? JSON.stringify(records, null, 2) : JSON.stringify(records);
+}
+
+function csvEscape(s, sep) {
+  if (s === null || s === undefined) return "";
+  const v = String(s);
+  if (v.includes(sep) || v.includes('"') || v.includes("\n") || v.includes("\r")) {
+    return '"' + v.replace(/"/g, '""') + '"';
+  }
+  return v;
+}
+
+function toDelimited(records, sep, withHeader) {
+  const lines = [];
+  if (withHeader) lines.push(["tgId", "embyId", "expiresAt"].join(sep));
+  for (const r of records) {
+    lines.push([csvEscape(r.tgId, sep), csvEscape(r.embyId, sep), csvEscape(r.expiresAt, sep)].join(sep));
+  }
+  return lines.join("\n");
+}
+
+// ---------- UI wiring ----------
+
+const $ = (id) => document.getElementById(id);
+const drop = $("drop"), fileInput = $("file"), out = $("out"), msgs = $("msgs"), stats = $("stats");
+const fmtSeg = $("fmt"), btnDl = $("download"), btnCopy = $("copy"), btnClear = $("clear");
+const cbOnly = $("onlyBound"), cbHeader = $("header"), cbPretty = $("pretty");
+
+let lastParsed = null; // 原始解析结果（包含完整列）
+let lastSourceName = "";
+
+function setMsg(text, kind) {
+  msgs.innerHTML = text ? `<span class="${kind || ""}">${text}</span>` : "";
+}
+
+function currentFmt() {
+  return fmtSeg.querySelector("button.on").dataset.v;
+}
+
+function render() {
+  if (!lastParsed) { out.textContent = "（还没东西可以看 —— 先丢个文件进来）"; btnDl.disabled = true; btnCopy.disabled = true; stats.innerHTML = ""; return; }
+  const recs = buildRecords(lastParsed, { onlyBound: cbOnly.checked });
+  const withExpiry = recs.filter(r => r.expiresAt).length;
+  const withEmby = recs.filter(r => r.embyId).length;
+  stats.innerHTML =
+    `<span>一共 <b>${recs.length}</b> 个人</span>` +
+    `<span>已经绑了 Emby 的 <b>${withEmby}</b></span>` +
+    `<span>有到期日的 <b>${withExpiry}</b></span>` +
+    `<span>永久的 <b>${recs.length - withExpiry}</b></span>`;
+
+  let text;
+  const fmt = currentFmt();
+  if (fmt === "json") text = toJSON(recs, cbPretty.checked);
+  else if (fmt === "csv") text = toDelimited(recs, ",", cbHeader.checked);
+  else text = toDelimited(recs, "\t", cbHeader.checked);
+
+  // 预览太长会卡，截一段显示；下载的是完整内容
+  const MAX = 200_000;
+  out.textContent = text.length > MAX ? text.slice(0, MAX) + `\n\n... 下面还有，预览先截到这里 —— 完整的 ${text.length} 个字符都在下载里` : text;
+  out._full = text;
+  btnDl.disabled = recs.length === 0;
+  btnCopy.disabled = recs.length === 0;
+}
+
+function readFile(file) {
+  if (!file) return;
+  setMsg(`正在读 ${file.name}（${(file.size / 1024).toFixed(1)} KB）...`);
+  lastSourceName = file.name.replace(/\.[^.]+$/, "");
+  const reader = new FileReader();
+  reader.onerror = () => setMsg("文件没读出来，再试一次？", "err");
+  reader.onload = () => {
+    try {
+      const t0 = performance.now();
+      const parsed = parseEmbySql(String(reader.result || ""));
+      lastParsed = parsed;
+      const dt = (performance.now() - t0).toFixed(0);
+      if (parsed.length === 0) setMsg(`这份文件里没找到 emby 表的记录 —— 是不是传错了？（用了 ${dt}ms 看完）`, "warn");
+      else setMsg(`好了，挑出来 ${parsed.length} 个人（用了 ${dt}ms）`, "ok");
+      render();
+    } catch (e) {
+      lastParsed = null;
+      render();
+      setMsg("读这份 SQL 的时候卡住了：" + (e && e.message ? e.message : String(e)), "err");
+    }
+  };
+  reader.readAsText(file, "utf-8");
+}
+
+drop.addEventListener("click", () => fileInput.click());
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("dragging"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("dragging"));
+drop.addEventListener("drop", (e) => {
+  e.preventDefault(); drop.classList.remove("dragging");
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) { fileInput.value = ""; readFile(f); }
+});
+fileInput.addEventListener("change", () => readFile(fileInput.files[0]));
+
+fmtSeg.addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  fmtSeg.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  render();
+});
+
+for (const cb of [cbOnly, cbHeader, cbPretty]) cb.addEventListener("change", render);
+
+btnDl.addEventListener("click", () => {
+  const fmt = currentFmt();
+  const ext = fmt === "json" ? "json" : fmt === "csv" ? "csv" : "tsv";
+  const mime = fmt === "json" ? "application/json" : fmt === "csv" ? "text/csv" : "text/tab-separated-values";
+  const text = out._full || "";
+  const blob = new Blob([text], { type: mime + ";charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = (lastSourceName || "sakura-roster") + "." + ext;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+btnCopy.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(out._full || "");
+    setMsg("复好了，去贴吧", "ok");
+  } catch (e) {
+    setMsg("没法写到剪贴板：" + e.message, "err");
+  }
+});
+
+btnClear.addEventListener("click", () => {
+  lastParsed = null; lastSourceName = ""; fileInput.value = "";
+  setMsg(""); render();
+});
+</script>
+</body>
+</html>
