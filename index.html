@@ -139,12 +139,17 @@
 
       <details>
         <summary>字段是怎么对上的？</summary>
-        <p style="margin-top:8px;line-height:1.7">
-          原表 <code>emby</code> 里：<code>tg</code> 是 Telegram ID，<code>embyid</code> 是 Emby 那边的用户 ID，<code>ex</code> 是到期时间。<br>
-          导出时分别叫 <code>tgId</code>、<code>embyId</code>、<code>expiresAt</code>。<br>
-          <code>ex</code> 是 <code>NULL</code> 或者空的，就当作永久 —— 导出里 <code>expiresAt</code> 留空。<br>
-          时间统一按 UTC 写成 <code>2026-12-31T00:00:00Z</code> 这种形式。mysqldump（反引号、<code>\'</code> 转义）和 sqlite <code>.dump</code>（双引号、<code>''</code> 转义）都能读。
-        </p>
+        <div style="margin-top:8px;line-height:1.7">
+          导出三列：<code>tgId</code> ← <code>emby.tg</code>，<code>embyId</code> ← <code>emby.embyid</code>，<code>expiresAt</code> 按 UTC 写成 <code>2026-12-31T00:00:00Z</code> 这种形式。<br>
+          谁会被导出、到期时间怎么算，看 <code>emby.lv</code>：
+          <ul style="margin:6px 0 0;padding-left:20px">
+            <li><code>a</code> 白名单 —— 导出，<code>expiresAt</code> 留空（永久，不看 <code>ex</code>）</li>
+            <li><code>b</code> 普通用户 —— 导出，<code>expiresAt</code> 取 <code>ex</code>（<code>ex</code> 为 <code>NULL</code> 时也留空）</li>
+            <li><code>c</code> 封禁 —— 跳过</li>
+            <li><code>d</code> 无账号 —— 跳过</li>
+          </ul>
+          <p style="margin:8px 0 0">支持 mysqldump（反引号、<code>\'</code> 转义）和 sqlite <code>.dump</code>（双引号、<code>''</code> 转义）。</p>
+        </div>
       </details>
     </section>
 
@@ -405,17 +410,20 @@ function toIsoZ(v) {
   return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`;
 }
 
+// 按 Sakura_embyboss 的 lv 字段决定要不要导出、到期时间怎么算：
+//   a 白名单 → 导出，永久（expiresAt 留空，忽略 ex）
+//   b 普通用户 → 导出，按 ex 写到期
+//   c 封禁 / d 无账号 / 其它 → 跳过
 function buildRecords(parsed, opts) {
   const out = [];
   for (const r of parsed) {
-    const tg = r.tg;
-    const embyid = r.embyid;
-    const ex = r.ex;
-    const tgId = tg === null || tg === undefined ? "" : String(tg);
-    const embyId = embyid === null || embyid === undefined ? "" : String(embyid);
-    const expiresAt = toIsoZ(ex);
+    const lv = r.lv == null ? "" : String(r.lv).toLowerCase();
+    if (lv !== "a" && lv !== "b") continue;
+    const tgId = r.tg === null || r.tg === undefined ? "" : String(r.tg);
     if (!tgId) continue;
+    const embyId = r.embyid === null || r.embyid === undefined ? "" : String(r.embyid);
     if (opts.onlyBound && !embyId) continue;
+    const expiresAt = lv === "a" ? "" : toIsoZ(r.ex);
     out.push({ tgId, embyId, expiresAt });
   }
   return out;
@@ -464,13 +472,19 @@ function currentFmt() {
 function render() {
   if (!lastParsed) { out.textContent = "（还没东西可以看 —— 先丢个文件进来）"; btnDl.disabled = true; btnCopy.disabled = true; stats.innerHTML = ""; return; }
   const recs = buildRecords(lastParsed, { onlyBound: cbOnly.checked });
-  const withExpiry = recs.filter(r => r.expiresAt).length;
-  const withEmby = recs.filter(r => r.embyId).length;
+  // 按 lv 分桶（用原始解析结果，看一下数据库里都是些什么人）
+  let lvA = 0, lvB = 0, lvSkipped = 0;
+  for (const r of lastParsed) {
+    const lv = r.lv == null ? "" : String(r.lv).toLowerCase();
+    if (lv === "a") lvA++;
+    else if (lv === "b") lvB++;
+    else lvSkipped++;
+  }
   stats.innerHTML =
-    `<span>一共 <b>${recs.length}</b> 个人</span>` +
-    `<span>已经绑了 Emby 的 <b>${withEmby}</b></span>` +
-    `<span>有到期日的 <b>${withExpiry}</b></span>` +
-    `<span>永久的 <b>${recs.length - withExpiry}</b></span>`;
+    `<span>导出 <b>${recs.length}</b> 个人</span>` +
+    `<span>白名单（永久）<b>${lvA}</b></span>` +
+    `<span>普通用户 <b>${lvB}</b></span>` +
+    `<span>跳过（封禁 / 无账号）<b>${lvSkipped}</b></span>`;
 
   let text;
   const fmt = currentFmt();
