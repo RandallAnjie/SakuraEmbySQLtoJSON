@@ -91,6 +91,7 @@
     font-family: var(--mono); font-size: 12.5px; line-height: 1.5; max-height: 480px; overflow: auto;
     white-space: pre; margin: 0;
   }
+  pre.out.wrap { white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; }
   details { margin-top: 14px; font-size: 13px; color: var(--muted); }
   details summary { cursor: pointer; }
   details code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); }
@@ -122,8 +123,8 @@
           <button data-v="csv">CSV</button>
           <button data-v="tsv">TSV</button>
         </span>
-        <label><input type="checkbox" id="onlyBound" /> 跳过还没绑 Emby 的</label>
-        <label><input type="checkbox" id="header" checked /> CSV/TSV 带表头</label>
+        <label><input type="checkbox" id="onlyBound" checked /> 跳过还没绑 Emby 的</label>
+        <label><input type="checkbox" id="header" /> CSV/TSV 带表头</label>
         <label><input type="checkbox" id="pretty" checked /> JSON 排版好看一点</label>
       </div>
 
@@ -476,6 +477,9 @@ function render() {
   if (fmt === "json") text = toJSON(recs, cbPretty.checked);
   else if (fmt === "csv") text = toDelimited(recs, ",", cbHeader.checked);
   else text = toDelimited(recs, "\t", cbHeader.checked);
+
+  // 紧凑 JSON 是一整行，让预览自动换行；其它格式（含美化 JSON、CSV、TSV）保持原样
+  out.classList.toggle("wrap", fmt === "json" && !cbPretty.checked);
 
   // 预览太长会卡，截一段显示；下载的是完整内容
   const MAX = 200_000;
